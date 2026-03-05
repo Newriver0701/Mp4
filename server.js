@@ -1,5 +1,3 @@
-process.env.FFMPEG_PATH = '/usr/bin/ffmpeg';
-
 const express = require('express');
 const { createCanvas } = require('canvas');
 const ffmpeg = require('fluent-ffmpeg');
