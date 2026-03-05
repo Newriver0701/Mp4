@@ -1,5 +1,0 @@
-[phases.setup]
-nixPkgs = ["ffmpeg", "nodejs_20", "cairo", "pango", "libpng", "libjpeg", "giflib", "librsvg", "pixman"]
-
-[variables]
-FFMPEG_PATH = "/root/.nix-profile/bin/ffmpeg"
