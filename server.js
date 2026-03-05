@@ -1,3 +1,5 @@
+process.env.FFMPEG_PATH = '/usr/bin/ffmpeg';
+
 const express = require('express');
 const { createCanvas } = require('canvas');
 const ffmpeg = require('fluent-ffmpeg');
@@ -15,7 +17,6 @@ app.use(express.static('public'));
 const W = 405, H = 720, FPS = 30, DURATION = 4;
 const TOTAL_FRAMES = FPS * DURATION;
 
-// ── DATA ──
 const ITEMS = [
   {label:'大吉',color:'#FFD700'},{label:'縁結び',color:'#FF6B9D'},
   {label:'金運UP',color:'#00D4AA'},{label:'吉',color:'#818CF8'},
@@ -34,7 +35,6 @@ const TAROT = [
   {name:'月',en:'THE MOON',meaning:'潜在意識・隠された真実',color:'#A78BFA'},
 ];
 
-// ── DRAW HELPERS ──
 function drawBg(ctx) {
   ctx.fillStyle = '#0D0A1E';
   ctx.fillRect(0, 0, W, H);
@@ -92,7 +92,6 @@ function drawFooter(ctx) {
   txt(ctx, '✦', W/2, H - 28, 14, 'rgba(155,92,246,0.5)');
 }
 
-// ── ROULETTE ──
 function drawWheel(ctx, angle) {
   const cx = W/2, cy = H/2 - 10, R = 148, sa = (2 * Math.PI) / ITEMS.length;
   ctx.save(); ctx.shadowColor = '#9B5CF6'; ctx.shadowBlur = 24;
@@ -135,7 +134,6 @@ function frameRoulette(ctx, p, state) {
   drawFooter(ctx);
 }
 
-// ── NUMBER ──
 function frameNumber(ctx, p, state) {
   drawBg(ctx); drawHeader(ctx, 'ラッキーナンバー');
   const cx = W/2, cy = H/2 - 10, bw = 96, bh = 96, gap = 14;
@@ -150,7 +148,7 @@ function frameNumber(ctx, p, state) {
     ctx.lineWidth = 2; rr(ctx, bx, by, bw, bh, 14); ctx.stroke(); ctx.restore();
     const num = locked ? String(state.picks[i]).padStart(2, '0') :
       String(LUCKY[Math.floor((p * 100 + i * 17) % LUCKY.length)]).padStart(2, '0');
-    ctx.save(); ctx.font = "900 36px monospace";
+    ctx.save(); ctx.font = '900 36px monospace';
     ctx.fillStyle = locked ? '#F5C842' : '#c084fc';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(num, bx + bw / 2, cy); ctx.restore();
@@ -168,7 +166,6 @@ function frameNumber(ctx, p, state) {
   drawFooter(ctx);
 }
 
-// ── TAROT ──
 function drawCardBack(ctx, cx, cy, cw, ch) {
   ctx.fillStyle = '#1e1b4b'; rr(ctx, cx - cw/2, cy - ch/2, cw, ch, 16); ctx.fill();
   ctx.strokeStyle = 'rgba(155,92,246,0.5)'; ctx.lineWidth = 2;
@@ -219,15 +216,11 @@ function frameTarot(ctx, p, state) {
   drawFooter(ctx);
 }
 
-// ── VIDEO GENERATION ──
 async function generateVideo(type) {
   const tmpDir = path.join(os.tmpdir(), uuidv4());
   fs.mkdirSync(tmpDir, { recursive: true });
-
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-
-  // setup state
   let state = {};
   if (type === 'roulette') {
     state.wheelTarget = (5 + Math.random() * 5) * 2 * Math.PI;
@@ -239,8 +232,6 @@ async function generateVideo(type) {
   } else {
     state.card = TAROT[Math.floor(Math.random() * TAROT.length)];
   }
-
-  // render frames
   for (let i = 0; i < TOTAL_FRAMES; i++) {
     const p = i / (TOTAL_FRAMES - 1);
     if (type === 'roulette') frameRoulette(ctx, p, state);
@@ -249,8 +240,6 @@ async function generateVideo(type) {
     const buf = canvas.toBuffer('image/png');
     fs.writeFileSync(path.join(tmpDir, `frame${String(i).padStart(4,'0')}.png`), buf);
   }
-
-  // ffmpeg
   const outPath = path.join(tmpDir, 'output.mp4');
   await new Promise((resolve, reject) => {
     ffmpeg()
@@ -263,11 +252,9 @@ async function generateVideo(type) {
       .on('error', reject)
       .run();
   });
-
   return { outPath, tmpDir };
 }
 
-// ── ROUTES ──
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
