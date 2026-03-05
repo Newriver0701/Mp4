@@ -1,3 +1,6 @@
+const ffmpegStatic = require('ffmpeg-static');
+process.env.FFMPEG_PATH = ffmpegStatic;
+
 const express = require('express');
 const { createCanvas } = require('canvas');
 const ffmpeg = require('fluent-ffmpeg');
