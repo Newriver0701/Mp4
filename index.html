@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>占いリール — 動画エクスポート</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700;800&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --gold:#F5C842; --rose:#FF6B9D; --violet:#9B5CF6; --deep:#0D0A1E; }
+  body { background: var(--deep); color: #fff; font-family: 'Noto Sans JP', sans-serif; min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 60% 40% at 15% 15%, rgba(155,92,246,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 85% 85%, rgba(255,107,157,0.15) 0%, transparent 60%);
+  }
+  .wrap { position: relative; z-index: 1; max-width: 460px; margin: 0 auto; padding: 28px 16px 60px; }
+  header { text-align: center; margin-bottom: 28px; }
+  .eyebrow { font-size: 10px; letter-spacing: 0.5em; color: rgba(245,200,66,0.5); margin-bottom: 8px; }
+  h1 {
+    font-family: 'Shippori Mincho', serif; font-size: 22px; font-weight: 800;
+    background: linear-gradient(135deg, #F5C842 0%, #FF6B9D 50%, #9B5CF6 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    letter-spacing: 0.08em; line-height: 1.4;
+  }
+  .tabs { display: flex; background: rgba(255,255,255,0.04); border-radius: 50px; padding: 4px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); gap: 3px; }
+  .tab {
+    flex: 1; padding: 10px 4px; border: none; border-radius: 50px;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 11px; font-weight: 700;
+    cursor: pointer; transition: all 0.3s; color: rgba(255,255,255,0.35); background: transparent;
+  }
+  .tab.active { background: linear-gradient(135deg, rgba(155,92,246,0.7), rgba(255,107,157,0.5)); color: #fff; }
+
+  .preview-wrap {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; overflow: hidden; margin-bottom: 16px;
+    aspect-ratio: 9/16; max-height: 440px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview-wrap video { width: 100%; height: 100%; object-fit: cover; border-radius: 20px; }
+  .preview-placeholder {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    color: rgba(255,255,255,0.3); font-size: 13px;
+  }
+  .preview-placeholder .icon { font-size: 40px; opacity: 0.4; }
+
+  .controls { display: flex; flex-direction: column; gap: 10px; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn {
+    flex: 1; padding: 14px 8px; border: none; border-radius: 14px;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.06em; transition: all 0.3s;
+  }
+  .btn-primary { background: linear-gradient(135deg, #9B5CF6, #FF6B9D); color: #fff; box-shadow: 0 0 20px rgba(155,92,246,0.35); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-dl { background: linear-gradient(135deg, #F5C842, #F59E0B); color: #0D0A1E; box-shadow: 0 0 20px rgba(245,200,66,0.3); }
+  .btn-dl:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .progress { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, #9B5CF6, #FF6B9D, #F5C842); border-radius: 2px; width: 0%; transition: width 0.3s; }
+
+  .status {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 12px 16px; font-size: 12px; color: rgba(255,255,255,0.5);
+    text-align: center; min-height: 42px; display: flex; align-items: center; justify-content: center;
+  }
+  .status.loading { color: #FF6B9D; border-color: rgba(255,107,157,0.4); animation: blink 1s ease-in-out infinite; }
+  .status.done { color: #34D399; border-color: rgba(52,211,153,0.4); }
+  .status.err { color: #f87171; border-color: rgba(248,113,113,0.4); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">✦ URANAI PLATFORM ✦</div>
+    <h1>神秘の占いリール<br>動画エクスポーター</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('roulette')">ルーレット</button>
+    <button class="tab" onclick="setTab('number')">ラッキーナンバー</button>
+    <button class="tab" onclick="setTab('tarot')">タロット</button>
+  </div>
+
+  <div class="preview-wrap" id="previewWrap">
+    <div class="preview-placeholder" id="placeholder">
+      <div class="icon">🎬</div>
+      <div>「動画を生成」を押すと<br>ここにプレビューが表示されます</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="btn-row">
+      <button class="btn btn-primary" id="genBtn" onclick="generate()">✦ 動画を生成</button>
+      <button class="btn btn-dl" id="dlBtn" disabled onclick="download()">⬇ 保存</button>
+    </div>
+    <div class="progress"><div class="progress-bar" id="pb"></div></div>
+    <div class="status" id="status">タブを選んで動画を生成してください</div>
+  </div>
+</div>
+
+<script>
+let currentTab = 'roulette';
+let videoBlob = null;
+let generating = false;
+
+function setTab(tab) {
+  if (generating) return;
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['roulette','number','tarot'][i] === tab);
+  });
+  videoBlob = null;
+  document.getElementById('dlBtn').disabled = true;
+  resetPreview();
+  setStatus('タブを選んで動画を生成してください');
+}
+
+function resetPreview() {
+  const wrap = document.getElementById('previewWrap');
+  const existing = wrap.querySelector('video');
+  if (existing) existing.remove();
+  document.getElementById('placeholder').style.display = 'flex';
+}
+
+async function generate() {
+  if (generating) return;
+  generating = true;
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('dlBtn').disabled = true;
+  videoBlob = null;
+  resetPreview();
+
+  const pb = document.getElementById('pb');
+  pb.style.width = '10%';
+  setStatus('サーバーで動画を生成中... 少しお待ちください', 'loading');
+
+  // fake progress while waiting
+  let fakeP = 10;
+  const fakeInterval = setInterval(() => {
+    fakeP = Math.min(fakeP + 2, 85);
+    pb.style.width = fakeP + '%';
+  }, 800);
+
+  try {
+    const res = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: currentTab })
+    });
+    clearInterval(fakeInterval);
+
+    if (!res.ok) throw new Error('生成に失敗しました');
+
+    const blob = await res.blob();
+    videoBlob = blob;
+    pb.style.width = '100%';
+
+    // show preview
+    const url = URL.createObjectURL(blob);
+    document.getElementById('placeholder').style.display = 'none';
+    const video = document.createElement('video');
+    video.src = url;
+    video.controls = true;
+    video.autoplay = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.objectFit = 'cover';
+    document.getElementById('previewWrap').appendChild(video);
+
+    document.getElementById('dlBtn').disabled = false;
+    setStatus('✦ 生成完了！プレビューを確認して「保存」してください', 'done');
+    setTimeout(() => { pb.style.width = '0%'; }, 2000);
+
+  } catch(e) {
+    clearInterval(fakeInterval);
+    pb.style.width = '0%';
+    setStatus('エラー: ' + e.message, 'err');
+  }
+
+  generating = false;
+  document.getElementById('genBtn').disabled = false;
+}
+
+function download() {
+  if (!videoBlob) return;
+  const url = URL.createObjectURL(videoBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `uranai-${currentTab}-${Date.now()}.mp4`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (type ? ' ' + type : '');
+}
+</script>
+</body>
+</html>
